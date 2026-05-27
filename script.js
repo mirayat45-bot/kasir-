@@ -3147,3 +3147,51 @@ function initBackupPage() {
   clearBackupBrgStatus();
   showBarangPreview(BARANG); // Langsung preview data lokal
 }
+// ══════════════════════════════════════════
+// FITUR 1: SHORTCUT KEYBOARD
+// Tambahkan di BARIS PALING BAWAH script.js
+// ══════════════════════════════════════════
+(function initKeyboardShortcuts() {
+  document.addEventListener('keydown', function (e) {
+    const tag = document.activeElement?.tagName?.toLowerCase();
+    const isInput = tag === 'input' || tag === 'textarea' || tag === 'select';
+
+    // Enter = Tambah ke keranjang (hanya dari field barang/harga/qty)
+    if (e.key === 'Enter' && isInput) {
+      const aktifId = document.activeElement?.id;
+      const triggerIds = ['fi-kode', 'fi-qty', 'fi-harga'];
+      if (triggerIds.includes(aktifId)) {
+        e.preventDefault();
+        tambahKeKeranjang?.();
+        return;
+      }
+    }
+
+    // F2 = Simpan & cetak nota
+    if (e.key === 'F2') {
+      e.preventDefault();
+      document.getElementById('btn-simpan-nota')?.click();
+      return;
+    }
+
+    // ESC = Reset / batal edit
+    if (e.key === 'Escape') {
+      batalEditTrx?.();
+      // Reset field input utama
+      ['fi-kode','fi-qty','fi-harga','fi-nama','fi-wa','fi-catatan'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = id === 'fi-qty' ? '1' : '';
+      });
+      renderCart?.();
+      showToast('Form direset', 'info');
+      return;
+    }
+
+    // Ctrl+P = Print nota
+    if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
+      e.preventDefault();
+      window.print();
+      return;
+    }
+  });
+})();
