@@ -788,129 +788,106 @@ tfoot#bnr-rekap-foot td { padding: 12px 10px; font-weight:900; font-family:var(-
 #gas-guide { animation: fadeSlideUp 0.25s ease; }
 #gas-code-block { user-select: all; }
 
-javascript// ══════════════════════════════════════════
-// FITUR 1: SHORTCUT KEYBOARD
-// Tambahkan di BARIS PALING BAWAH script.js
-// ══════════════════════════════════════════
-(function initKeyboardShortcuts() {
-  document.addEventListener('keydown', function (e) {
-    const tag = document.activeElement?.tagName?.toLowerCase();
-    const isInput = tag === 'input' || tag === 'textarea' || tag === 'select';
+/* ══════════════════════════════════════════════════════════════
+   TAMBAHAN FITUR — F3, F4, F5 CSS
+   ══════════════════════════════════════════════════════════════ */
 
-    // Enter = Tambah ke keranjang (hanya dari field barang/harga/qty)
-    if (e.key === 'Enter' && isInput) {
-      const aktifId = document.activeElement?.id;
-      const triggerIds = ['fi-kode', 'fi-qty', 'fi-harga'];
-      if (triggerIds.includes(aktifId)) {
-        e.preventDefault();
-        tambahKeKeranjang?.();
-        return;
-      }
-    }
+/* ════════════════════════════════════════════════════════════
+   TAMBAHAN FITUR — clean, no duplicates
+   ════════════════════════════════════════════════════════════ */
 
-    // F2 = Simpan & cetak nota
-    if (e.key === 'F2') {
-      e.preventDefault();
-      document.getElementById('btn-simpan-nota')?.click();
-      return;
-    }
+/* F3: Status badge — tambahan warna (bg-green/red/amber sudah ada di atas) */
+.bg-blue  { background:rgba(59,130,246,0.12); color:#1E40AF; border:1px solid rgba(59,130,246,0.25); }
+.bg-gray  { background:rgba(100,116,139,0.12); color:#334155; border:1px solid rgba(100,116,139,0.25); }
+.dot-b    { background:#3B82F6; }
+.dot-gray { background:#64748B; }
+.dot-p    { background:#8B5CF6; }
 
-    // ESC = Reset / batal edit
-    if (e.key === 'Escape') {
-      batalEditTrx?.();
-      // Reset field input utama
-      ['fi-kode','fi-qty','fi-harga','fi-nama','fi-wa','fi-catatan'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.value = id === 'fi-qty' ? '1' : '';
-      });
-      renderCart?.();
-      showToast('Form direset', 'info');
-      return;
-    }
+/* F4: Boss widgets */
+#dash-boss-widgets .card { transition: transform 0.2s; min-height: 0; }
+#dash-boss-widgets .card:hover { transform: translateY(-2px); }
 
-    // Ctrl+P = Print nota
-    if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
-      e.preventDefault();
-      window.print();
-      return;
-    }
-  });
-})();
+/* F5: Nota modal buttons — mobile friendly (REPLACE inline styles) */
+.nota-acts {
+  display: flex !important;  /* Override nothing — just make sure flex works */
+  flex-wrap: wrap;
+  gap: 7px;
+  padding: 12px 14px;
+  background: var(--surf2);
+  border-top: 1px solid var(--bdr);
+}
+.nota-btn {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px !important;
+  padding: 9px 8px !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+@media (max-width: 420px) {
+  .nota-acts { display: grid !important; grid-template-columns: 1fr 1fr; }
+  .nota-btn  { font-size: 11px !important; padding: 8px 6px !important; }
+}
+/* Print still hides nota-acts — this is intentional */
 
-FITUR 2 — NOTIFIKASI TOAST
-
-File diubah: script.js DAN style.css
-Letak script.js: Tambahkan di awal script.js, sebelum fungsi lain (supaya semua fungsi bisa memanggilnya).
-Letak style.css: Tambahkan di bagian paling bawah style.css.
-
-Tambahan di script.js (taruh di AWAL file):
-
-  /* ══════════════════════════════════════════
-   FITUR 2: TOAST NOTIFICATION
-   Tambahkan di BAWAH style.css
-   ══════════════════════════════════════════ */
-#toast-container {
-  position: fixed;
-  bottom: 24px;
-  right: 24px;
-  z-index: 99999;
+/* F5: Dashboard card consistent height */
+#d-stats .card,
+#dash-recap-omzet .card {
+  min-height: 88px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  pointer-events: none;
-  max-width: calc(100vw - 48px);
-}
-.toast {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 13px 18px;
-  border-radius: 14px;
-  font-size: 13px;
-  font-weight: 700;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
-  transform: translateY(20px);
-  opacity: 0;
-  transition: transform 0.3s ease, opacity 0.3s ease;
-  pointer-events: auto;
-  max-width: 340px;
-  word-break: break-word;
-}
-.toast-show  { transform: translateY(0); opacity: 1; }
-.toast-hide  { transform: translateY(20px); opacity: 0; }
-.toast-success { background: #16a34a; color: #fff; }
-.toast-error   { background: #dc2626; color: #fff; }
-.toast-warning { background: #d97706; color: #fff; }
-.toast-info    { background: #2563eb; color: #fff; }
-.toast-icon    { font-size: 16px; flex-shrink: 0; }
-@media (max-width: 480px) {
-  #toast-container { bottom: 16px; right: 16px; left: 16px; }
-  .toast { max-width: 100%; }
+  justify-content: space-between;
 }
 
-  /* ══════════════════════════════════════════
-   FITUR 3: WARNA STATUS TRANSAKSI
-   Tambahkan di BAWAH style.css
-   ══════════════════════════════════════════ */
+/* F5: Responsive — hanya tambah apa yang belum ada */
+@media (max-width: 640px) {
+  .ph { flex-wrap: wrap; gap: 10px; }
+  #dash-boss-widgets > div { grid-template-columns: 1fr 1fr !important; }
+}
 
-/* Badge / pill status — dipakai di tabel transaksi */
-.status-badge {
+/* Laporan grafik containers */
+.lap-chart-wrap { position: relative; height: 220px; margin-top: 12px; }
+
+/* Histori harga badge */
+.harga-history-badge {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 800;
+  color: var(--tx3);
+  background: var(--surf2);
+  border: 1px solid var(--bdr);
+  border-radius: 6px;
+  padding: 2px 6px;
+  margin-top: 3px;
+  font-family: var(--mono);
+}
+
+/* Customer loyal badge */
+.loyal-badge {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 4px 12px;
-  border-radius: 99px;
-  font-size: 11px;
+  gap: 4px;
+  font-size: 9px;
   font-weight: 800;
-  letter-spacing: 0.3px;
-  white-space: nowrap;
+  background: linear-gradient(135deg,#F59E0B,#D97706);
+  color: #fff;
+  border-radius: 99px;
+  padding: 2px 8px;
 }
-.status-lunas   { background: #dcfce7; color: #15803d; }   /* Hijau  */
-.status-dp      { background: #fef9c3; color: #a16207; }   /* Kuning */
-.status-hutang  { background: #fee2e2; color: #b91c1c; }   /* Merah  */
-.status-proses  { background: #dbeafe; color: #1d4ed8; }   /* Biru   */
-.status-selesai { background: #f1f5f9; color: #64748b; }   /* Abu    */
-.status-pending { background: #fef9c3; color: #a16207; }   /* Kuning */
 
-  
+/* Toast position fix */
+#toast {
+  position: fixed;
+  bottom: 24px;
+  right: 20px;
+  z-index: 99999;
+  pointer-events: none;
+}
 
+/* WA Boss notif indicator */
+.wa-boss-sent {
+  font-size: 10px;
+  color: #25D366;
+  font-weight: 700;
+}
