@@ -891,3 +891,165 @@ tfoot#bnr-rekap-foot td { padding: 12px 10px; font-weight:900; font-family:var(-
   color: #25D366;
   font-weight: 700;
 }
+
+/* ═══════════════════════════════════════════════════════
+   PATCH UI OPTIMASI — Compact, Responsive, Professional
+   ═══════════════════════════════════════════════════════ */
+
+/* ── Dashboard boss: status pembayaran 1 baris ── */
+#dash-boss-widgets [style*="grid-template-columns"] {
+  min-width: 0;
+}
+@media (max-width: 900px) {
+  #dash-boss-widgets [style*="repeat(5,1fr)"] {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+  #dash-boss-widgets [style*="repeat(auto-fit"] {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+}
+@media (max-width: 480px) {
+  #dash-boss-widgets [style*="repeat"] {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+/* ── Vendor form — no horizontal scroll on HP ── */
+#pg-pengeluaran {
+  overflow-x: hidden;
+}
+#pg-pengeluaran .layout-aside,
+#pg-pengeluaran .card {
+  min-width: 0;
+  word-break: break-word;
+}
+@media (max-width: 900px) {
+  #pg-pengeluaran .g2,
+  #pg-pengeluaran .g3 { grid-template-columns: 1fr; }
+  #mv-nombre, #mv-qty, #mv-harga { font-size: 13px !important; padding: 10px 12px !important; }
+}
+
+/* ── Kasbon: compact & responsive ── */
+@media (max-width: 900px) {
+  #pg-kasbon .layout-aside { grid-template-columns: 1fr; }
+  #pg-kasbon .field input,
+  #pg-kasbon .field select { padding: 10px 12px; font-size: 13px; }
+  #pg-kasbon .card { padding: 16px; }
+  #kb-nominal { font-size: 16px !important; }
+}
+
+/* ── POS Kasir: compact & no horizontal scroll ── */
+#pg-input { overflow-x: hidden; }
+@media (max-width: 900px) {
+  #pg-input .layout-pos { grid-template-columns: 1fr; }
+  #pg-input .card { padding: 14px; }
+  #pg-input .field input,
+  #pg-input .field select,
+  #pg-input .field textarea { font-size: 13px; padding: 10px 12px; }
+  #pg-input .radio-lbl { padding: 8px 6px; font-size: 11px; }
+  #fi-total { font-size: 18px !important; }
+  #btn-simpan-nota { padding: 14px !important; font-size: 14px !important; }
+  .cart-item { padding: 8px; }
+  /* AI input kasir — lebih kecil */
+  .ai-card { padding: 14px; }
+  .ai-textarea { font-size: 12px; }
+  #pg-input .btn-ai { width: 100% !important; }
+}
+
+/* ── Setoran laci: rapikan angka ── */
+#lc-val-total {
+  font-size: 26px !important;
+  font-weight: 900 !important;
+  font-family: var(--mono) !important;
+  color: var(--blue-d) !important;
+}
+#lc-val-in, #lc-val-out, #lc-val-kasbon, #lc-val-modal {
+  font-size: 14px !important;
+  font-family: var(--mono) !important;
+}
+
+/* ── Nota vendor — teks singkat ── */
+.nota-vendor-teks {
+  background: var(--surf2);
+  border: 1px solid var(--bdr);
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-size: 12px;
+  font-family: var(--mono);
+  color: var(--tx2);
+  margin-top: 12px;
+  white-space: pre-line;
+  line-height: 1.7;
+}
+
+/* ── Produksi cards ── */
+.produksi-card { transition: transform 0.2s; }
+.produksi-card:hover { transform: translateY(-2px); }
+
+/* ── Target page ── */
+#balik-modal-info { min-height: 56px; }
+#target-progress-wrap { padding: 4px 0; }
+#tg-catatan { line-height: 1.7; }
+
+/* ── Rekap kasir ── */
+#rekap-kasir-stats .stat { min-height: 80px; }
+
+/* ── Pending order ── */
+#pending-stats { margin-bottom: 20px; }
+
+/* ── Laporan: download PDF btn ── */
+#pg-laporan .ph button { white-space: nowrap; }
+
+/* ── PC: POS full layout tetap normal ── */
+@media (min-width: 901px) {
+  #pg-input .layout-pos {
+    grid-template-columns: 1.6fr 1fr;
+  }
+  #pg-kasbon .layout-aside {
+    grid-template-columns: 350px 1fr;
+  }
+  #pg-pengeluaran .layout-aside {
+    grid-template-columns: 380px 1fr;
+  }
+}
+
+/* ── Tablet (641-900px) ── */
+@media (max-width: 900px) and (min-width: 641px) {
+  .g4 { grid-template-columns: repeat(2, 1fr); }
+  .g3 { grid-template-columns: repeat(2, 1fr); }
+  .main { padding: 16px 20px; }
+}
+
+/* ── Nota modal — action buttons rapi ── */
+.nota-acts {
+  display: flex !important;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 10px 12px;
+  background: var(--surf2);
+  border-top: 1px solid var(--bdr);
+}
+.nota-btn {
+  flex: 1;
+  min-width: 0;
+  font-size: 11px !important;
+  padding: 9px 6px !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+}
+@media (max-width: 480px) {
+  .nota-acts { grid-template-columns: 1fr 1fr; display: grid !important; }
+  .nota-btn { font-size: 10px !important; padding: 8px 4px !important; }
+}
+
+/* ── Laporan PDF print area ── */
+@media print {
+  #mo-cetak-laporan { position: absolute !important; left: 0 !important; top: 0 !important; width: 100% !important; height: auto !important; background: #fff !important; padding: 0 !important; }
+}
+
+/* ── Tambah produksi filter active state ── */
+.produksi-filter {
+  transition: all 0.18s;
+}
