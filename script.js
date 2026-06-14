@@ -1156,6 +1156,28 @@ function simpanTrxPage(actionType = 'nota'){
   let diskon = cleanRibuan(document.getElementById('fi-diskon').value); let ongkir = cleanRibuan(document.getElementById('fi-ongkir').value);
   var total = subtotal - diskon + ongkir; if(total < 0) total = 0;
   
+  // ── Validasi DP ──────────────────────────────────────────────────
+  if(bayar === 'DP') {
+    if(!dpVal || dpVal <= 0) {
+      toast('⚠️ Nominal DP wajib diisi jika status pembayaran adalah DP!', 3000, 'warning');
+      document.getElementById('fi-dp-val').focus();
+      return;
+    }
+    if(dpVal > total) {
+      toast('⚠️ Nominal DP tidak boleh melebihi total tagihan! (Total: ' + fmtRp(total) + ')', 3000, 'warning');
+      document.getElementById('fi-dp-val').focus();
+      return;
+    }
+    if(dpVal === total) {
+      if(confirm('Nominal DP sama dengan total tagihan (' + fmtRp(total) + '). Ubah status menjadi Lunas?')) {
+        bayar = 'Lunas';
+        document.querySelector('input[name="fi_bayar"][value="Lunas"]').checked = true;
+        toggleDP('fi');
+      }
+    }
+  }
+  // ────────────────────────────────────────────────────────────────
+
   var dibayar = (bayar === 'Lunas') ? total : ((bayar === 'DP') ? dpVal : 0);
   var sisa = total - dibayar; 
   var id = currentEditTrxId ? currentEditTrxId : nowId();
@@ -1842,26 +1864,37 @@ function buildNotaInner(t, isTampil) {
       if(t.ongkir > 0) subtotalHtml += `<div class="n-row" style="color:#64748B;font-size:12px"><span class="n-lbl">Ongkos Kirim</span><span class="n-val">+${fmtRp(t.ongkir)}</span></div>`;
   }
 
-  // Dinamis Multi Rekening
-  var rekListHtml = (TOKO.rekening||[]).map(r => `
-      <div style="background:#F8FAFC; border:1px solid #E2E8F0; padding:10px; border-radius:8px; margin-bottom:8px; text-align:left; font-size:12px; color:#475569;">
-        <strong style="color:#0F172A; font-size:13px;">${r.bank} - ${r.no}</strong> <br> ${r.an}
-      </div>
-  `).join('');
+  // ── Ringkasan Pembayaran (DP / Lunas / Kasbon) — TANPA rekening & QRIS ──
+  var dibayar = t.dibayar || 0;
+  var sisa    = t.sisa    || 0;
+  var statusLabel = t.bayar === 'Lunas'   ? '✅ Lunas'
+                  : t.bayar === 'DP'      ? '🔶 DP / Cicilan'
+                  : t.bayar === 'Kasbon'  ? '🔴 Kasbon / Belum Lunas'
+                  : '⚠️ Belum Lunas';
+  var statusColor = t.bayar === 'Lunas' ? '#15803D' : t.bayar === 'DP' ? '#B45309' : '#DC2626';
 
+  var paymentSummary = `
+    <div style="margin-top:14px; padding:12px 14px; background:#F8FAFC; border:1px solid #E2E8F0; border-radius:8px; font-size:13px;">
+      <div style="display:flex; justify-content:space-between; padding:5px 0; border-bottom:1px dashed #E2E8F0;">
+        <span style="color:#64748B;">Total Tagihan</span>
+        <span style="font-weight:800; color:#0F172A; font-family:var(--mono);">${fmtRp(t.total)}</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; padding:5px 0; border-bottom:1px dashed #E2E8F0;">
+        <span style="color:#64748B;">${t.bayar === 'DP' ? 'DP / Sudah Dibayar' : 'Sudah Dibayar'}</span>
+        <span style="font-weight:700; color:#15803D; font-family:var(--mono);">${fmtRp(dibayar)}</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; padding:5px 0; border-bottom:1px dashed #E2E8F0;">
+        <span style="color:#64748B;">Sisa Tagihan</span>
+        <span style="font-weight:800; color:${sisa > 0 ? '#DC2626' : '#15803D'}; font-family:var(--mono);">${fmtRp(sisa)}</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; padding:6px 0 2px;">
+        <span style="color:#64748B; font-weight:700;">Status Pembayaran</span>
+        <span style="font-weight:800; color:${statusColor};">${statusLabel}</span>
+      </div>
+    </div>`;
+
+  // paymentSection dikosongkan — rekening & QRIS tidak tampil di nota customer
   var paymentSection = '';
-  if (t.sisa > 0) {
-     paymentSection = `
-       <div style="margin-top:20px; padding:16px; border-top:2px dashed #E2E8F0; background:#F8FAFC; border-radius:12px;">
-         <div style="display:flex; align-items:center; gap:8px; font-size:12px; font-weight:800; color:#0F172A; margin-bottom:12px;"><div style="width:4px; height:14px; background:#3B82F6; border-radius:2px;"></div> METODE PEMBAYARAN </div>
-         ${rekListHtml}
-         <div style="background:#fff; border:1px solid #E2E8F0; padding:20px; border-radius:12px; text-align:center; margin-bottom:12px; box-shadow:0 4px 6px -1px rgba(0,0,0,0.05);">
-           <img src="${TOKO.qrisImg}" style="width:100%; max-width:220px; height:auto; margin-bottom:12px; border-radius:8px;" alt="QRIS" onerror="this.style.display='none'">
-           <div style="font-size:14px; font-weight:800; color:#0F172A;">Scan QRIS untuk pembayaran</div>
-           <div style="font-size:12px; color:#64748B; margin-top:4px;">Masukkan nominal sesuai sisa tagihan</div>
-         </div>
-       </div>`;
-  }
   
   let stampHtml = t.sisa === 0 
       ? `<div class="stamp-lunas">LUNAS</div>` 
@@ -1891,11 +1924,7 @@ function buildNotaInner(t, isTampil) {
         ${itemRows}
         ${subtotalHtml}
         
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:16px; margin-bottom:8px; background:#F8FAFC; padding:12px 16px; border-radius:8px; border:1px solid #E2E8F0;">
-          <span style="font-size:14px; color:#475569; font-weight:700;">Total Tagihan Akhir</span><span style="font-size:18px; font-weight:900; font-family:var(--mono);color:#2563EB;">${fmtRp(t.total)}</span>
-        </div>
-        
-        ${t.sisa > 0 ? `<div style="text-align:right; font-size:16px; font-weight:900; color:#DC2626; margin-top:8px;">Sisa Tagihan: ${fmtRp(t.sisa)}</div>` : ''}
+        ${paymentSummary}
         
         ${paymentSection}
         
@@ -1911,26 +1940,143 @@ function buildNotaInner(t, isTampil) {
 
 function kirimWANota(){
   if(!notaForWA) return;
-  var docTitle = (notaForWA.bayar === 'Lunas') ? '*BUKTI TRANSAKSI*' : '*INVOICE PESANAN*';
-  var statusText = `⚠️ *Sisa Tagihan:* ${fmtRp(notaForWA.sisa)}\n`; var alamatText = notaForWA.alamat ? `\n📍 *Alamat:* ${notaForWA.alamat}` : '';
-  
-  var trxItems = notaForWA.items || [{kode: 'CSTM', barang: notaForWA.barang||'Pesanan', qty: notaForWA.qty||1, harga: notaForWA.harga||notaForWA.total, total: notaForWA.total}];
-  var itemTexts = trxItems.map(i => `▪️ *${i.barang}*\n   ${i.qty} x ${fmtRp(i.harga)} = ${fmtRp(i.total)}`).join('\n');
+  var t = notaForWA;
 
-  let ekstraBiaya = '';
-  if(notaForWA.diskon > 0) ekstraBiaya += `➖ *Diskon:* -${fmtRp(notaForWA.diskon)}\n`; if(notaForWA.ongkir > 0) ekstraBiaya += `🛵 *Ongkir:* +${fmtRp(notaForWA.ongkir)}\n`;
+  var trxItems = t.items || [{kode:'CSTM', barang: t.barang||'Pesanan', qty: t.qty||1, harga: t.harga||t.total, total: t.total}];
+  var itemTexts = trxItems.map((i, idx) =>
+    `${idx+1}. ${i.barang} x ${i.qty}\n   Harga: ${fmtRp(i.harga)}\n   Subtotal: ${fmtRp(i.total)}`
+  ).join('\n');
 
-  var msg = `Halo *${notaForWA.pelanggan}*, berikut rincian pesanan Anda dari *ABUNAWAS (Percetakan & Konveksi)*.\n\n📄 ${docTitle}\n🧾 *ID Nota:* ${notaForWA.id}\n📅 *Tanggal:* ${notaForWA.tgl}\n\n📦 *DAFTAR PESANAN*\n${itemTexts}\n${ekstraBiaya}\n💰 *TOTAL TAGIHAN AKHIR: ${fmtRp(notaForWA.total)}*\n${notaForWA.sisa > 0 ? statusText : '✅ *Status: LUNAS*'}\n📍 *Pengambilan barang di:* Abunawas Percetakan & Konveksi${alamatText}\n(Kasir: ${notaForWA.kasir})\n\n*NOTED :*\n- HASIL WARNA CETAKAN TIDAK BISA 100% SAMA DENGAN WARNA LAYAR\n- BARANG TIDAK DIAMBIL LEBIH DARI 7 HARI DIANGGAP HILANG\n\nTerima kasih sudah mempercayakan pesanan Anda pada kami! 🙏`;
-  if(notaForWA.wa){ sendWA(notaForWA.wa,msg); } else { navigator.clipboard&&navigator.clipboard.writeText(msg).then(()=>toast("Pesan disalin ke clipboard!",2500,"info")).catch(()=>toast("No WA tidak ada",2500,"warning")); }
+  var ekstraBiaya = '';
+  if(t.diskon > 0) ekstraBiaya += `➖ Diskon: -${fmtRp(t.diskon)}\n`;
+  if(t.ongkir > 0) ekstraBiaya += `🛵 Ongkir: +${fmtRp(t.ongkir)}\n`;
+
+  var dibayar = t.dibayar || 0;
+  var sisa    = t.sisa    || 0;
+  var statusWA = t.bayar === 'Lunas'  ? 'Lunas ✅'
+               : t.bayar === 'DP'     ? 'DP 🔶'
+               : t.bayar === 'Kasbon' ? 'Kasbon / Belum Lunas 🔴'
+               : 'Belum Lunas ⚠️';
+
+  var msg =
+`Halo Kak *${t.pelanggan}*, berikut nota pesanan dari *Abunawas Percetakan & Konveksi*.
+
+🧾 *No Nota:* ${t.id}
+📅 *Tanggal:* ${t.tgl}
+
+📦 *Rincian Pesanan:*
+${itemTexts}
+${ekstraBiaya}
+💰 *Total Tagihan:* ${fmtRp(t.total)}
+💸 *${t.bayar === 'DP' ? 'DP / Sudah Dibayar' : 'Sudah Dibayar'}:* ${fmtRp(dibayar)}
+📌 *Sisa Tagihan:* ${fmtRp(sisa)}
+📋 *Status Pembayaran:* ${statusWA}
+
+_NOTED:_
+_- Hasil warna cetakan tidak bisa 100% sama dengan layar._
+_- Barang tidak diambil lebih dari 7 hari dianggap hilang._
+
+Terima kasih sudah mempercayakan pesanan pada kami! 🙏`;
+
+  if(t.wa){ sendWA(t.wa, msg); } else {
+    navigator.clipboard && navigator.clipboard.writeText(msg)
+      .then(()=>toast("Nota disalin ke clipboard!",2500,"info"))
+      .catch(()=>toast("Nomor WA tidak ada — pesan gagal dikirim",2500,"warning"));
+  }
 }
 
 function kirimWAInfoBayar() {
   if(!notaForWA) return;
-  if(notaForWA.sisa <= 0) { toast("Pesanan ini sudah Lunas! Tidak perlu mengirim info pembayaran lagi.", 2500, 'info'); return; }
+  var t = notaForWA;
 
-  let rekWa = (TOKO.rekening||[]).map(r => `${r.bank}: ${r.no} (${r.an})`).join('\n');
-  var msg = `Halo *${notaForWA.pelanggan}*, untuk pesanan dengan ID *${notaForWA.id}*, berikut adalah detail tagihan Anda:\n\n💰 *Total Tagihan:* ${fmtRp(notaForWA.total)}\n${notaForWA.bayar === 'DP' ? `💸 *Sudah Dititipkan:* ${fmtRp(notaForWA.dibayar)}\n` : ''}⚠️ *SISA PEMBAYARAN: ${fmtRp(notaForWA.sisa)}*\n\n💳 *METODE PEMBAYARAN VIA TRANSFER:*\n${rekWa}\n\nAtau via *QRIS*, silakan klik link berikut untuk melihat Barcode QRIS kami:\n👉 ${TOKO.qrisLink}\n\n_(Ditunggu bukti foto transfer/pembayarannya ya kak agar pesanan bisa segera diproses. Terima kasih! 🙏)_`;
-  if(notaForWA.wa){ sendWA(notaForWA.wa,msg); } else { navigator.clipboard&&navigator.clipboard.writeText(msg).then(()=>toast("Info bayar disalin ke clipboard!",2500,"info")).catch(()=>toast("No WA tidak ada",2500,"warning")); }
+  var sisa    = t.sisa    || 0;
+  var dibayar = t.dibayar || 0;
+
+  // Bangun daftar rekening
+  var rekWa = (TOKO.rekening||[]).length > 0
+    ? (TOKO.rekening||[]).map((r,i) => `   ${i+1}. *${r.bank}*\n      No: ${r.no}\n      ${r.an}`).join('\n')
+    : '   (Rekening belum diatur di Pengaturan)';
+
+  var qrisInfo = TOKO.qrisLink
+    ? `\n🔳 *QRIS:*\n   Scan QRIS atau klik link berikut:\n   👉 ${TOKO.qrisLink}`
+    : '';
+
+  var sisaInfo = sisa > 0
+    ? `⚠️ *Sisa yang perlu dibayar: ${fmtRp(sisa)}*`
+    : `✅ *Pesanan ini sudah LUNAS*`;
+
+  var msg =
+`Halo Kak *${t.pelanggan}*, berikut info pembayaran untuk pesanan Anda.
+
+🧾 *No Nota:* ${t.id}
+💰 *Total Tagihan:* ${fmtRp(t.total)}
+${t.bayar === 'DP' ? `💸 *Sudah Dititipkan (DP):* ${fmtRp(dibayar)}\n` : ''}${sisaInfo}
+
+━━━━━━━━━━━━━━━━━━━━
+💳 *METODE PEMBAYARAN:*
+
+1️⃣ *Cash* — Bayar langsung di toko
+
+2️⃣ *Transfer Bank:*
+${rekWa}
+${qrisInfo}
+━━━━━━━━━━━━━━━━━━━━
+_Mohon kirim bukti foto transfer / scan QRIS setelah pembayaran._
+_Terima kasih! 🙏_`;
+
+  if(t.wa){ sendWA(t.wa, msg); } else {
+    navigator.clipboard && navigator.clipboard.writeText(msg)
+      .then(()=>toast("Info pembayaran disalin ke clipboard!",2500,"info"))
+      .catch(()=>toast("Nomor WA tidak ada — pesan gagal dikirim",2500,"warning"));
+  }
+}
+
+// ── Kirim hanya info rekening ─────────────────────────────────────
+function kirimWARekening() {
+  if(!notaForWA) return;
+  var t = notaForWA;
+  var rekWa = (TOKO.rekening||[]).length > 0
+    ? (TOKO.rekening||[]).map((r,i) => `${i+1}. *${r.bank}* — ${r.no}\n   ${r.an}`).join('\n')
+    : '(Rekening belum diatur)';
+
+  var msg =
+`Halo Kak *${t.pelanggan}*, berikut nomor rekening kami untuk pembayaran pesanan *${t.id}*:
+
+💳 *Rekening Bank:*
+${rekWa}
+
+Sisa tagihan: *${fmtRp(t.sisa||0)}*
+
+_Mohon kirim bukti transfer setelah pembayaran. Terima kasih! 🙏_`;
+
+  if(t.wa){ sendWA(t.wa, msg); } else {
+    navigator.clipboard && navigator.clipboard.writeText(msg)
+      .then(()=>toast("Info rekening disalin ke clipboard!",2500,"info"))
+      .catch(()=>toast("Nomor WA tidak ada",2500,"warning"));
+  }
+}
+
+// ── Kirim hanya QRIS ─────────────────────────────────────────────
+function kirimWAQRIS() {
+  if(!notaForWA) return;
+  var t = notaForWA;
+  if(!TOKO.qrisLink) { toast("Link QRIS belum diatur di Pengaturan Toko.",2500,"warning"); return; }
+
+  var msg =
+`Halo Kak *${t.pelanggan}*, berikut link QRIS untuk pembayaran pesanan *${t.id}*:
+
+🔳 *Scan QRIS kami:*
+👉 ${TOKO.qrisLink}
+
+Nominal yang dibayar: *${fmtRp(t.sisa||t.total)}*
+
+_Mohon kirim bukti setelah scan. Terima kasih! 🙏_`;
+
+  if(t.wa){ sendWA(t.wa, msg); } else {
+    navigator.clipboard && navigator.clipboard.writeText(msg)
+      .then(()=>toast("Info QRIS disalin ke clipboard!",2500,"info"))
+      .catch(()=>toast("Nomor WA tidak ada",2500,"warning"));
+  }
 }
 
 function kirimPDF() {

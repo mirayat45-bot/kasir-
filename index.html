@@ -1393,13 +1393,26 @@
           <!-- Injeksi HTML via JS -->
         </div>
     </div>
-    <div class="nota-acts">
-      <button class="btn btn-ghost nota-btn" onclick="closeModal('mo-nota')">✕ Tutup</button>
-      <button class="btn btn-blue nota-btn"  onclick="bagikanGambarNota()">🖼️ Gambar</button>
-      <button class="btn btn-wa nota-btn"    onclick="kirimWANota()">📲 WA Nota</button>
-      <button class="btn btn-amber nota-btn" onclick="kirimWAInfoBayar()">💳 Info Bayar</button>
-      <button class="btn btn-ghost nota-btn" onclick="bukaTemplateModa()" style="border:2px solid var(--blue);color:var(--blue);">📋 Template</button>
-      <button class="btn btn-ghost nota-btn" onclick="window.print()" style="border:2px solid var(--bdr);">🖨️ Print</button>
+    <div class="nota-acts" style="flex-direction:column; gap:8px; padding:12px 16px;">
+      <!-- Baris 1: Tombol Nota -->
+      <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
+        <span style="font-size:10px; font-weight:700; color:var(--tx3); text-transform:uppercase; letter-spacing:.04em; min-width:70px;">📄 Nota:</span>
+        <button class="btn btn-wa nota-btn"    onclick="kirimWANota()" title="Kirim nota teks ke WA customer">📲 WA Nota</button>
+        <button class="btn btn-blue nota-btn"  onclick="bagikanGambarNota()" title="Kirim/unduh gambar nota">🖼️ Gambar Nota</button>
+        <button class="btn btn-ghost nota-btn" onclick="window.print()" style="border:1px solid var(--bdr);" title="Cetak nota">🖨️ Print</button>
+      </div>
+      <!-- Baris 2: Tombol Info Bayar -->
+      <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
+        <span style="font-size:10px; font-weight:700; color:var(--tx3); text-transform:uppercase; letter-spacing:.04em; min-width:70px;">💳 Bayar:</span>
+        <button class="btn btn-amber nota-btn" onclick="kirimWAInfoBayar()" title="Kirim info rekening + QRIS ke customer">💳 Info Bayar</button>
+        <button class="btn btn-ghost nota-btn" onclick="kirimWARekening()" style="border:1px solid var(--amber);color:var(--amber-d);" title="Kirim nomor rekening saja">🏦 Rekening</button>
+        <button class="btn btn-ghost nota-btn" onclick="kirimWAQRIS()" style="border:1px solid var(--blue);color:var(--blue);" title="Kirim link QRIS saja">🔳 QRIS</button>
+      </div>
+      <!-- Baris 3: Aksi lain -->
+      <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center; justify-content:space-between;">
+        <button class="btn btn-ghost nota-btn" onclick="bukaTemplateModa()" style="border:1px solid var(--bdr); font-size:11px;">📋 Template WA</button>
+        <button class="btn btn-ghost nota-btn" onclick="closeModal('mo-nota')" style="border:1px solid var(--bdr); font-size:11px; margin-left:auto;">✕ Tutup</button>
+      </div>
     </div>
   </div>
 </div>
