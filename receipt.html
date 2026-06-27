@@ -131,16 +131,16 @@
   <!-- Toolbar (hidden on print) -->
   <div class="preview-toolbar">
     <div class="preview-toolbar-brand">
-      🧾 Abunawas <span>Receipt Preview</span>
+      Abunawas <span>Receipt Preview</span>
     </div>
     <div class="preview-actions">
       <select class="preview-select" id="mode-select" onchange="onModeChange(this.value)">
-        <option value="80mm">🖨️ 80mm</option>
-        <option value="58mm">🖨️ 58mm</option>
-        <option value="a4">📄 A4</option>
+        <option value="80mm">80mm</option>
+        <option value="58mm">58mm</option>
+        <option value="a4">A4</option>
       </select>
       <button class="preview-btn preview-btn-ghost" onclick="window.history.back()">← Kembali</button>
-      <button class="preview-btn preview-btn-primary" onclick="doPrint()">🖨️ Print / Simpan PDF</button>
+      <button class="preview-btn preview-btn-primary" onclick="doPrint()">Print / Simpan PDF</button>
     </div>
   </div>
 
@@ -148,7 +148,7 @@
   <div class="preview-canvas">
     <div class="preview-card" id="preview-card">
       <div class="preview-empty">
-        <div style="font-size:48px;margin-bottom:16px">🧾</div>
+        <div style="margin-bottom:16px;display:flex;justify-content:center;color:#94A3B8;"><svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
         <h2>Receipt Preview</h2>
         <p>Memuat data transaksi...</p>
       </div>
@@ -235,7 +235,7 @@
         if (!loaded) {
           card.innerHTML = `
             <div class="preview-empty">
-              <div style="font-size:48px">⚠️</div>
+              <div style="margin-bottom:8px;display:flex;justify-content:center;color:#EF4444;"><svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
               <h2>Transaksi Tidak Ditemukan</h2>
               <p>ID: <code>${trxId}</code></p>
               <p style="margin-top:8px;font-size:12px;color:#94A3B8">
@@ -249,7 +249,7 @@
       } else {
         card.innerHTML = `
           <div class="preview-empty">
-            <div style="font-size:48px">🧾</div>
+            <div style="margin-bottom:8px;display:flex;justify-content:center;color:#94A3B8;"><svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
             <h2>Tidak Ada ID Transaksi</h2>
             <p>Tambahkan <code>?id=TRX-xxx</code> atau <code>?demo=1</code></p>
           </div>`;

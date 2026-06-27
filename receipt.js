@@ -189,9 +189,9 @@ const ReceiptController = (() => {
         font-family:var(--fn);font-size:12px;font-weight:700;
         background:var(--surf);color:var(--tx);outline:none;
       ">
-        <option value="80mm">🖨️ 80mm (Standar)</option>
-        <option value="58mm">🖨️ 58mm (Mini)</option>
-        <option value="a4">📄 A4 (PDF)</option>
+        <option value="80mm">80mm (Standar)</option>
+        <option value="58mm">58mm (Mini)</option>
+        <option value="a4">A4 (PDF)</option>
       </select>`;
     actWrap.prepend(ctrl);
   };
