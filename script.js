@@ -300,14 +300,54 @@ document.querySelectorAll('.modal-bg').forEach(function(m){
 function getHarga(b,qty){var t=b.tiers.find(function(x){return qty<=x.max;})||b.tiers[b.tiers.length-1];return t.h;}
 
 // ── F3: Status badge — warna lengkap ─────────────────────────
-function badgeOrder(s) {
-  if(!s || s === 'Pending')   return '<span class="badge" style="background:var(--surf2);color:var(--tx2);border:1px solid var(--bdr);">Pending</span>';
-  if(s === 'Diproses')        return '<span class="badge" style="background:#EFF6FF;color:#1D4ED8;border:1px solid #BFDBFE;">Diproses</span>';
-  if(s === 'Selesai')         return '<span class="badge" style="background:#F0FDF4;color:#15803D;border:1px solid #BBF7D0;">Selesai</span>';
-  if(s === 'Diambil')         return '<span class="badge" style="background:#F5F3FF;color:#6D28D9;border:1px solid #DDD6FE;">Diambil</span>';
-  if(s === 'Batal')           return '<span class="badge" style="background:#FFF1F2;color:#BE123C;border:1px solid #FECDD3;">Batal</span>';
-  return '<span class="badge" style="background:var(--surf2);color:var(--tx2);">' + s + '</span>';
+function badgeMetodeBayar(t){
+  if(!t || !t.metode || t.bayar === 'Hutang') return '';
+  var m = t.metode;
+  var color = m === 'QRIS' ? 'var(--blue)' : (m === 'Transfer' ? 'var(--purple, #7c3aed)' : 'var(--green)');
+  return '<br><span style="display:inline-block;margin-top:5px;font-size:10px;font-weight:900;color:'+color+';">' + m + '</span>';
 }
+
+/* ════════════════ STATUS ORDER ════════════════ */
+var ORDER_STATUS_LIST = ['Pending','Diproses','Selesai','Diambil','Batal'];
+
+function badgeOrderStatus(s){
+  var status = s || 'Pending';
+  var map = {
+    'Pending':  { bg:'#f3f4f6', color:'#6b7280', dot:'#9ca3af' },
+    'Diproses': { bg:'#dbeafe', color:'#1d4ed8', dot:'#3b82f6' },
+    'Selesai':  { bg:'#d1fae5', color:'#065f46', dot:'#10b981' },
+    'Diambil':  { bg:'#ede9fe', color:'#5b21b6', dot:'#8b5cf6' },
+    'Batal':    { bg:'#fee2e2', color:'#991b1b', dot:'#ef4444' }
+  };
+  var c = map[status] || map['Pending'];
+  return '<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:700;background:'+c.bg+';color:'+c.color+'"><span style="width:6px;height:6px;border-radius:50%;background:'+c.dot+';flex-shrink:0"></span>'+status+'</span>';
+}
+
+function bukaUbahStatusOrder(id){
+  var t = TRX.find(function(x){ return x.id === id; });
+  if(!t) return;
+  document.getElementById('oso-id').value = id;
+  var cur = t.orderStatus || 'Pending';
+  var sel = document.getElementById('oso-status');
+  sel.value = cur;
+  openModal('mo-order-status');
+}
+
+function prosesUbahStatusOrder(){
+  var id = document.getElementById('oso-id').value;
+  var newStatus = document.getElementById('oso-status').value;
+  var t = TRX.find(function(x){ return x.id === id; });
+  if(!t){ toast('Transaksi tidak ditemukan!', 2000, 'error'); return; }
+  t.orderStatus = newStatus;
+  saveData();
+  closeModal('mo-order-status');
+  renderTrx();
+  if(curUser && curUser.role === 'kasir') renderKasirRiwayat();
+  toast('Status order diubah ke: ' + newStatus, 2200, 'success');
+}
+
+/* Alias lama agar tidak error kalau ada yang masih pakai badgeOrder */
+function badgeOrder(s){ return badgeOrderStatus(s); }
 
 function badgeBayar(s, sisa){
   if(s==='Lunas'||(sisa!==undefined&&sisa<=0)) return '<span class="badge bg-green"><span class="dot dot-g"></span>Lunas</span>';
@@ -736,18 +776,30 @@ function renderSetting() {
 function applyOngkirToggle() {
   var toggle = document.getElementById('set-tampil-ongkir');
   var aktif = toggle ? toggle.checked : (TOKO.tampilOngkir !== false);
+
   var wrap = document.getElementById('ongkir-wrap');
   var note = document.getElementById('ongkir-note');
   var diskonOnly = document.getElementById('diskon-only-wrap');
-  if(wrap) wrap.style.display = aktif ? '' : 'none';
-  if(note) note.style.display = aktif ? '' : 'none';
-  if(diskonOnly) diskonOnly.style.display = aktif ? 'none' : '';
-  if(!aktif) {
-    var ongkirEl = document.getElementById('fi-ongkir');
-    var jarakEl = document.getElementById('fi-jarak');
-    if(ongkirEl) ongkirEl.value = '';
-    if(jarakEl) jarakEl.value = '0';
+
+  var ongkirEl = document.getElementById('fi-ongkir');
+  var jarakEl = document.getElementById('fi-jarak');
+  var diskonEl = document.getElementById('fi-diskon');
+  var diskonAltEl = document.getElementById('fi-diskon-alt');
+
+  if (wrap) wrap.style.display = aktif ? '' : 'none';
+  if (note) note.style.display = aktif ? '' : 'none';
+
+  // Potongan Nota ikut tampil hanya saat Ongkir & Potongan aktif
+  if (diskonOnly) diskonOnly.style.display = 'none';
+
+  if (!aktif) {
+    if (ongkirEl) ongkirEl.value = '';
+    if (jarakEl) jarakEl.value = '0';
+    if (diskonEl) diskonEl.value = '';
+    if (diskonAltEl) diskonAltEl.value = '';
   }
+
+  if (typeof renderCart === 'function') renderCart();
 }
 
 /* Pay status selectable cards */
@@ -761,6 +813,29 @@ function updatePayStatusCards(prefix) {
     if(el) el.classList.remove('active');
   });
   if(map[v]) { var el = document.getElementById(map[v]); if(el) el.classList.add('active'); }
+  updateMetodeBayarUI(prefix);
+}
+
+function updateMetodeBayarUI(prefix) {
+  if(prefix !== 'fi') return;
+  var checked = document.querySelector('input[name="fi_bayar"]:checked');
+  var wrap = document.getElementById('fi-metode-wrap');
+  var metode = document.getElementById('fi-metode');
+  var note = document.getElementById('fi-metode-note');
+  if(!checked || !wrap || !metode) return;
+
+  if(checked.value === 'Hutang') {
+    wrap.style.display = 'none';
+    metode.value = '';
+  } else {
+    wrap.style.display = '';
+    if(!metode.value) metode.value = 'Cash';
+    if(note) {
+      note.textContent = checked.value === 'DP'
+        ? 'Metode ini untuk uang titipan/DP yang masuk.'
+        : 'Metode ini untuk pembayaran lunas yang masuk.';
+    }
+  }
 }
 
 function renderSetRek() {
@@ -954,7 +1029,7 @@ function renderDash(){
   var rows=fTrx.slice(0,5).map(function(t){
     let mainItem = (t.items && t.items.length > 0) ? t.items[0].barang : 'Pesanan'; let extraItems = (t.items && t.items.length > 1) ? ` +${t.items.length-1} lgi` : '';
     let editBtn = `<button class="btn btn-amber btn-xs" onclick="editTrx('${t.id}')">Edit</button>`;
-    return `<tr><td class="mono">${t.id}</td><td style="font-weight:600">${t.pelanggan}</td><td>${mainItem}${extraItems}</td><td style="font-weight:700;color:var(--blue)">${fmtRp(t.total)}</td><td>${badgeBayar(t.bayar)}</td><td><div style="display:flex; gap:6px; flex-wrap:wrap;">${editBtn}</div></td></tr>`;
+    return `<tr><td class="mono">${t.id}</td><td style="font-weight:600">${t.pelanggan}</td><td>${mainItem}${extraItems}</td><td style="font-weight:700;color:var(--blue)">${fmtRp(t.total)}</td><td>${badgeBayar(t.bayar)}${badgeMetodeBayar(t)}</td><td><div style="display:flex; gap:6px; flex-wrap:wrap;">${editBtn}</div></td></tr>`;
   }).join('');
   document.getElementById('d-trx').innerHTML='<div class="tbl-wrap"><table><thead><tr><th>ID Nota</th><th>Pelanggan</th><th>Barang/Jasa</th><th>Total (Rp)</th><th>Bayar</th><th>Aksi</th></tr></thead><tbody>'+(rows||emptyRow(6,'📊','Belum ada transaksi di periode ini'))+'</tbody></table></div>';
 
@@ -1008,7 +1083,7 @@ function editTrx(id) {
 
     document.getElementById('fi-diskon').value = t.diskon ? formatRibuan(t.diskon) : '';
     document.getElementById('fi-ongkir').value = t.ongkir ? formatRibuan(t.ongkir) : '';
-    document.getElementById('fi-jarak').value = (t.ongkir && TOKO.ongkirKm) ? (t.ongkir / TOKO.ongkirKm) : '0';
+    document.getElementById('fi-jarak').value = t.jarak ? t.jarak : ((t.ongkir && TOKO.ongkirKm) ? ((t.ongkir / TOKO.ongkirKm) + 2) : '0');
 
     
     
@@ -1027,14 +1102,6 @@ function editTrx(id) {
     toggleDP('fi');
     updatePayStatusCards('fi');
 
-    // Sync metode bayar
-    var fiMetode = document.getElementById('fi-metode');
-    if(fiMetode && t.metode) fiMetode.value = t.metode;
-
-    // Sync status order
-    var fiStatusOrder = document.getElementById('fi-status-order');
-    if(fiStatusOrder && t.statusOrder) fiStatusOrder.value = t.statusOrder;
-
     renderCart();
     toast('Mode Edit diaktifkan untuk ' + id, 2500, 'warning');
 }
@@ -1050,8 +1117,8 @@ function batalEditTrx() {
     document.getElementById('fi-catatan').value=''; 
     document.getElementById('fi-harga').value='';
     document.getElementById('fi-jarak').value='0'; document.getElementById('fi-ongkir').value=''; document.getElementById('fi-diskon').value='';
-    var fiMetode = document.getElementById('fi-metode'); if(fiMetode) fiMetode.value = 'Cash';
-    var fiStatusOrder = document.getElementById('fi-status-order'); if(fiStatusOrder) fiStatusOrder.value = 'Pending';
+    var fiMetodeReset = document.getElementById('fi-metode');
+    if(fiMetodeReset) fiMetodeReset.value = 'Cash';
     document.querySelector('input[name="fi_bayar"][value="Lunas"]').checked = true; toggleDP('fi'); updatePayStatusCards('fi'); applyOngkirToggle();
 
     CART = []; renderCart(); updateIdCust();
@@ -1136,8 +1203,7 @@ function tambahKeKeranjang() {
 }
 
 function hitungOngkir() {
-    let jarak = parseFloat(document.getElementById('fi-jarak').value) || 0;
-    let ongkir = (jarak > 2) ? (jarak - 2) * TOKO.ongkirKm : 0;
+      let ongkir = (jarak > 2) ? (jarak - 2) * TOKO.ongkirKm : 0;
     document.getElementById('fi-ongkir').value = formatRibuan(ongkir); renderCart();
 }
 
@@ -1214,7 +1280,6 @@ function simpanTrxPage(actionType = 'nota'){
   
   var noCetak=document.getElementById('fi-no-cetak').value.trim();
   var catatan=document.getElementById('fi-catatan').value.trim();
-  var statusOrderBaru = (document.getElementById('fi-status-order')||{value:'Pending'}).value || 'Pending';
   
   var komisiNama = ''; // dihapus dari form, nama kasir otomatis dari curUser
   var komisiNominal = 0;
@@ -1223,7 +1288,6 @@ function simpanTrxPage(actionType = 'nota'){
   
   var subtotal = CART.reduce((s, i) => s + i.total, 0); var modal = CART.reduce((s, i) => s + i.modal, 0);
   let diskon = cleanRibuan(document.getElementById('fi-diskon').value); let ongkir = cleanRibuan(document.getElementById('fi-ongkir').value);
-  let jarak = parseFloat(document.getElementById('fi-jarak').value) || 0;
   var total = subtotal - diskon + ongkir; if(total < 0) total = 0;
   
   var dibayar = (bayar === 'Lunas') ? total : ((bayar === 'DP') ? dpVal : 0);
@@ -1254,12 +1318,14 @@ function simpanTrxPage(actionType = 'nota'){
               if(document.getElementById('pg-barang').classList.contains('on')) renderBrg();
           }
 
+          var metodeEl1 = document.getElementById('fi-metode');
+          var metodeBayar1 = bayar === 'Hutang' ? '' : ((metodeEl1 && metodeEl1.value) || oldTrx.metode || 'Cash');
           TRX[idx] = {
               id: currentEditTrxId, tgl: oldTrx.tgl, pelanggan: nama, wa: wa, alamat: alamat, id_cust: idCust, no_cetak: noCetak,
               items: JSON.parse(JSON.stringify(CART)), total: total, modal: modal, bayar: bayar, dibayar: dibayar, sisa: sisa,
-              metode: document.getElementById('fi-metode') ? document.getElementById('fi-metode').value : (bayar==='Lunas' ? 'Cash' : oldTrx.metode),
+              metode: metodeBayar1,
               kasir: curUser.nama, catatan: catatan, diskon: diskon, ongkir: ongkir, jarak: jarak, komisiNama: komisiNama, komisiNominal: komisiNominal,
-              statusOrder: statusOrderBaru || oldTrx.statusOrder || 'Pending'
+              orderStatus: oldTrx.orderStatus || 'Pending'
           };
       }
       toast('Transaksi berhasil diupdate!', 2500, 'success');
@@ -1269,13 +1335,15 @@ function simpanTrxPage(actionType = 'nota'){
           CART.forEach(c => { let mBrg = BARANG.find(b => b.kode === c.kode); if (mBrg) mBrg.stok = (mBrg.stok || 0) - c.qty; });
           if(document.getElementById('pg-barang').classList.contains('on')) renderBrg();
       }
+      var metodeEl2 = document.getElementById('fi-metode');
+      var metodeBayar2 = bayar === 'Hutang' ? '' : ((metodeEl2 && metodeEl2.value) || 'Cash');
       TRX.unshift({
         id:id, tgl:nowDate(), pelanggan:nama, wa:wa, alamat:alamat, id_cust:idCust, no_cetak:noCetak,
         items:JSON.parse(JSON.stringify(CART)), total:total, modal:modal, 
         bayar:bayar, dibayar:dibayar, sisa:sisa,
-        metode: document.getElementById('fi-metode') ? document.getElementById('fi-metode').value : (bayar==='Lunas'?'Cash':''),
+        metode: metodeBayar2,
         kasir:curUser.nama, catatan:catatan, diskon: diskon, ongkir: ongkir, jarak: jarak, komisiNama: komisiNama, komisiNominal: komisiNominal,
-        statusOrder: statusOrderBaru || 'Pending'
+        orderStatus: 'Pending'
       });
       logActivity('CREATE', 'Transaksi', { label: 'Transaksi baru '+id+' — '+nama+' Rp '+fmt(total)+' ['+bayar+']' });
       toast('Transaksi berhasil disimpan!', 2500, 'success');
@@ -1305,46 +1373,36 @@ function hapusTrx(id) {
 function renderTrx(){
   var q=(document.getElementById('trx-q')||{value:''}).value.toLowerCase();
   var f=(document.getElementById('trx-f')||{value:''}).value;
-  var fo=(document.getElementById('trx-fo')||{value:''}).value;
-  var data=TRX.filter(t =>
-    (!q || t.pelanggan.toLowerCase().indexOf(q)>=0 || t.id.toLowerCase().indexOf(q)>=0 || (t.id_cust||'').toLowerCase().indexOf(q)>=0) &&
-    (!f || t.bayar===f) &&
-    (!fo || (t.statusOrder||'Pending')===fo)
-  );
-  var rows=data.map(t => {
+  var fOrder=(document.getElementById('trx-forder')||{value:''}).value;
+  var data=TRX.filter(function(t){
+    var matchQ = !q||t.pelanggan.toLowerCase().indexOf(q)>=0||t.id.toLowerCase().indexOf(q)>=0||(t.id_cust||'').toLowerCase().indexOf(q)>=0;
+    var matchF = !f||t.bayar===f;
+    var matchOrder = !fOrder||(t.orderStatus||'Pending')===fOrder;
+    return matchQ && matchF && matchOrder;
+  });
+  var rows=data.map(function(t) {
     let trxItems = t.items || [{kode: t.kode, barang: t.barang, qty: t.qty, harga: t.harga, total: t.total}];
-    let brgStr = trxItems.map(i => `<span style="font-size:12px">${i.barang} (x${i.qty})</span>`).join('<br>');
-    let delBtn = (curUser && curUser.role === 'boss') ? `<button class="btn btn-red btn-xs" onclick="hapusTrx('${t.id}')">Hapus</button>` : '';
-    let editBtn = `<button class="btn btn-amber btn-xs" onclick="editTrx('${t.id}')">Edit</button>`;
-    let metodeStr = t.metode ? `<br><span style="font-size:10px;color:var(--tx3)">${t.metode}</span>` : '';
+    let brgStr = trxItems.map(function(i){ return '<span style="font-size:12px">'+i.barang+' (x'+i.qty+')</span>'; }).join('<br>');
+    let delBtn = (curUser && curUser.role === 'boss') ? '<button class="btn btn-red btn-xs" onclick="hapusTrx(''+t.id+'')">Hapus</button>' : '';
+    let editBtn = '<button class="btn btn-amber btn-xs" onclick="editTrx(''+t.id+'')">Edit</button>';
+    let orderBadge = badgeOrderStatus(t.orderStatus);
+    let ubahStatusBtn = '<button class="btn btn-ghost btn-xs" onclick="bukaUbahStatusOrder(''+t.id+'')" title="Ubah Status Order">🔄 Status</button>';
 
-    return `<tr>
-      <td class="mono">${t.id}<br><span style="font-size:10px;color:var(--tx3)">${t.tgl}</span></td>
-      <td style="font-weight:600">${t.pelanggan}<br><span style="font-size:10px;color:var(--tx3)">ID: ${t.id_cust||t.wa||'-'}</span></td>
-      <td>${brgStr}</td>
-      <td style="font-weight:800;color:var(--blue-d)">${fmtRp(t.total)}</td>
-      <td>${badgeBayar(t.bayar)}${metodeStr}</td>
-      <td>
-        <select onchange="ubahStatusOrder('${t.id}', this.value)" style="font-size:11px;padding:4px 6px;border:1px solid var(--bdr);border-radius:6px;background:var(--surf);color:var(--tx);cursor:pointer;max-width:90px;">
-          <option value="Pending" ${(t.statusOrder||'Pending')==='Pending'?'selected':''}>Pending</option>
-          <option value="Diproses" ${t.statusOrder==='Diproses'?'selected':''}>Diproses</option>
-          <option value="Selesai" ${t.statusOrder==='Selesai'?'selected':''}>Selesai</option>
-          <option value="Diambil" ${t.statusOrder==='Diambil'?'selected':''}>Diambil</option>
-          <option value="Batal" ${t.statusOrder==='Batal'?'selected':''}>Batal</option>
-        </select>
-      </td>
-      <td><div style="display:flex; gap:6px; flex-wrap:wrap;">${t.sisa>0?`<button class="btn btn-green btn-xs" onclick="bukaPelunasan('${t.id}')">Pelunasan</button>`:''}
-      ${editBtn}
-      <button class="btn btn-ghost btn-xs" onclick="showNota('${t.id}')">Nota</button>${delBtn}</div></td></tr>`;
+    return '<tr>'
+      +'<td class="mono">'+t.id+'<br><span style="font-size:10px;color:var(--tx3)">'+t.tgl+'</span></td>'
+      +'<td style="font-weight:600">'+t.pelanggan+'<br><span style="font-size:10px;color:var(--tx3)">ID: '+(t.id_cust||t.wa||'-')+'</span></td>'
+      +'<td>'+brgStr+'</td>'
+      +'<td style="font-weight:800;color:var(--blue-d)">'+fmtRp(t.total)+'</td>'
+      +'<td>'+badgeBayar(t.bayar)+badgeMetodeBayar(t)+'</td>'
+      +'<td>'+orderBadge+'<br><div style="margin-top:4px">'+ubahStatusBtn+'</div></td>'
+      +'<td><div style="display:flex; gap:6px; flex-wrap:wrap;">'+(t.sisa>0?'<button class="btn btn-green btn-xs" onclick="bukaPelunasan(''+t.id+'')">Pelunasan</button>':'')
+      +editBtn
+      +'<button class="btn btn-ghost btn-xs" onclick="showNota(''+t.id+'')">Nota</button>'+delBtn+'</div></td></tr>';
   }).join('');
-  document.getElementById('trx-tbl').innerHTML=`<table><thead><tr><th>ID / Tgl</th><th>Pelanggan</th><th>Detail Pesanan</th><th>Total</th><th>Bayar / Metode</th><th>Status Order</th><th>Aksi</th></tr></thead><tbody>${rows||emptyRow(7,'🧾','Belum ada transaksi')}</tbody></table>`;
+  document.getElementById('trx-tbl').innerHTML='<table><thead><tr><th>ID / Tgl</th><th>Pelanggan</th><th>Detail Pesanan</th><th>Total Biaya</th><th>Status Bayar</th><th>Status Order</th><th>Aksi</th></tr></thead><tbody>'+(rows||emptyRow(7,'🧾','Belum ada transaksi'))+'</tbody></table>';
 }
 
 function bukaPelunasan(id) { document.getElementById('pl-id').value = id; openModal('mo-pelunasan'); }
-function ubahStatusOrder(id, status) {
-  var t = TRX.find(x => x.id === id);
-  if(t) { t.statusOrder = status; saveData(); toast('Status order diubah ke ' + status, 1800, 'success'); }
-}
 function prosesPelunasan() {
   let id = document.getElementById('pl-id').value; let met = document.getElementById('pl-metode').value; let t = TRX.find(x => x.id === id);
   if(t) { t.bayar = 'Lunas'; t.sisa = 0; t.dibayar = t.total; t.metode = met; saveData(); closeModal('mo-pelunasan'); renderTrx(); renderPiutang(); showNota(id); toast('Berhasil ditandai Lunas!', 2500, 'success'); }
@@ -1987,7 +2045,7 @@ function buildNotaCustomer(t) {
 
   // Status pembayaran info
   var metodeStr = t.metode ? `<div class="nota-status-row"><span>Metode Bayar</span><span class="val">${t.metode}</span></div>` : '';
-  var statusOrderStr = (t.statusOrder && t.statusOrder !== 'Pending') ? `<div class="nota-status-row"><span>Status Order</span><span class="val">${t.statusOrder}</span></div>` : '';
+  var statusOrderStr = ((t.orderStatus || t.statusOrder) && (t.orderStatus || t.statusOrder) !== 'Pending') ? `<div class="nota-status-row"><span>Status Order</span><span class="val">${t.orderStatus || t.statusOrder}</span></div>` : '';
   var statusInfo = '';
   if(t.bayar === 'DP' && t.dibayar > 0) {
     statusInfo = `
@@ -2222,7 +2280,7 @@ function kirimNotaTeks() {
   }
 
   if(t.metode) msg += `\nMetode Bayar: ${t.metode}`;
-  if(t.statusOrder && t.statusOrder !== 'Pending') msg += `\nStatus Order: ${t.statusOrder}`;
+  var _ordSt = t.orderStatus || t.statusOrder; if(_ordSt && _ordSt !== 'Pending') msg += `\nStatus Order: ${_ordSt}`;
   if(t.catatan) msg += `\nCatatan: ${t.catatan}`;
 
   msg += `\n\nTerima kasih telah mempercayai kami! 🙏`;
